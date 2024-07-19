@@ -24,24 +24,19 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-To fetch player data:
-```python
-from src.api.hiscores import HiscoresAPI, GameMode
-player_data = HiscoresAPI.get_player_data_from_api("player_name", GameMode.REGULAR)
-print(player_data)
-```
+Still under development, a proper usage documentation will come once all necessary scripts are fully developed
 
 ## Project Structure
 
-* `src/ `: Main source code
-    * `api/ `: API interaction modules
-    * `models/ `: Data models
-    * `utils/ `: Utility functions and helpers
 * `scripts/ `: Standalone scripts
+* `src/ `: Main source code
+    * `ai_integration/ `: AI integration
+    * `api/ `: API interaction modules
+    * `utils/ `: Utility functions and helpers
 * `tests/ `: Unit and integration tests
 
 ## Contributing
-While this project is primarily for personal use and portfolio demonstration, suggestions and feedback are welcome. Please open an issue to discuss any changes you'd like to see.
+While this project is primarily for personal use and portfolio demonstration, suggestions and feedback are welcome. Please open an issue to discuss any changes you would like to see.
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -49,7 +44,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgements
 
 Old School RuneScape and its API are properties of Jagex Ltd.
-Thanks to the Python community for providing excellent libraries and tools.
 =======
 # osrs-hiscores-analysis
 A Python project for analyzing Old School RuneScape hiscores data
