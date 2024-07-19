@@ -1,6 +1,7 @@
 # src/utils/logger.py
 import logging
 import sys
+import os
 from datetime import datetime
 
 class CustomTimeFormatter(logging.Formatter):
@@ -52,18 +53,18 @@ class UTF8StreamHandler(logging.StreamHandler):
             stream.write(record.message.encode(sys.stdout.encoding, errors='replace').decode(sys.stdout.encoding))
             stream.write(self.terminator)
 
-def setup_logging(log_file='hiscores.log', file_level=logging.INFO, console_level=logging.INFO):
+def setup_logging(log_file='all_logs.log', file_level=logging.INFO, console_level=logging.INFO):
     """
     Set up and configure the loggers.
-    
+
     This function sets up two loggers: one for file logging and one for console logging.
     The file logger provides detailed logs, while the console logger provides simplified logs.
 
     Args:
-        log_file (str): Name of the log file. Defaults to 'hiscores.log'.
+        log_file (str): Name of the log file. Defaults to 'logs/all_logs.log'.
         file_level (int): Logging level for file logger. Defaults to logging.INFO.
         console_level (int): Logging level for console logger. Defaults to logging.INFO.
-    
+
     Returns:
         tuple: A tuple containing (file_logger, console_logger).
             file_logger (logging.Logger): Logger for file output.
@@ -73,6 +74,10 @@ def setup_logging(log_file='hiscores.log', file_level=logging.INFO, console_leve
         IOError: If unable to create the log file.
     """
     
+    # Ensure the logs directory exists
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+
     # Create a root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)  # Set to DEBUG to allow all levels
@@ -95,8 +100,8 @@ def setup_logging(log_file='hiscores.log', file_level=logging.INFO, console_leve
     console_handler.setFormatter(console_formatter)
 
     # Create loggers
-    file_logger = logging.getLogger('hiscores_file_log')
-    console_logger = logging.getLogger('hiscores_console_log')
+    file_logger = logging.getLogger('to_file_logger')
+    console_logger = logging.getLogger('console_logger')
     
     # Add console handler only to console_logger
     console_logger.addHandler(console_handler)
@@ -108,13 +113,13 @@ def setup_logging(log_file='hiscores.log', file_level=logging.INFO, console_leve
 def get_module_logger(module_name):
     """
     Get a logger for a specific module.
-    
+
     This function returns a logger instance for a given module name.
     It's useful for creating module-specific loggers.
 
     Args:
         module_name (str): Name of the module.
-    
+
     Returns:
         logging.Logger: Logger instance for the specified module.
     """
