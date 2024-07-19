@@ -42,8 +42,7 @@ While this project is primarily for personal use and portfolio demonstration, su
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgements
-
 Old School RuneScape and its API are properties of Jagex Ltd.
-=======
+
 # osrs-hiscores-analysis
 A Python project for analyzing Old School RuneScape hiscores data
