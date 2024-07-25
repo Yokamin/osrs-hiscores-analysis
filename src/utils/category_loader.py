@@ -64,6 +64,14 @@ class CategoryLoader:
                         console_logger.error(f"Error: {error_msg}")
                         raise ValueError(error_msg)
 
+                # Check for empty categories
+                empty_categories = [cat for cat, items in raw_categories.items() if not items]
+                if empty_categories:
+                    error_msg = f"Empty categories found: {', '.join(empty_categories)}"
+                    logger.error(error_msg)
+                    console_logger.error(f"Error: {error_msg}")
+                    raise ValueError(error_msg)
+
                 cls._categories = raw_categories
 
             except FileNotFoundError:
