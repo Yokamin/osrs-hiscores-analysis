@@ -8,6 +8,7 @@ from .logger import logger, console_logger
 class Categories(Enum):
     """Enum representing different categories in the config."""
     ALL_SKILLS = "All Skills"
+    ALL_ACTIVITIES = "All Activities"
     COMBAT = "Combat"
     COMBAT_INCLUDING_SLAYER = "Combat Including Slayer"
     GATHERING = "Gathering"
@@ -24,17 +25,13 @@ class CategoryLoader:
     """
     A class to load and retrieve skill and activity categories from a YAML file.
 
-    This class provides methods to load categories from a YAML file and retrieve
-    specific categories. It uses caching to avoid repeated file reads.
+    This class provides methods to load categories from a YAML file and retrieve specific categories.
+    It uses caching to avoid repeated file reads.
 
     Attributes:
         BASE_DIR (str): The base directory path.
         CATEGORIES_FILE (str): The path to the YAML file containing the categories.
         _categories (dict[str, list[str]] | None): Cached category data.
-
-    Methods:
-        _load_categories: Load the YAML file containing the categories.
-        get_category: Get a specific category.
     """
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -48,22 +45,35 @@ class CategoryLoader:
         """
         Load the YAML file containing the categories.
 
-        This method loads the categories from the YAML file and stores them in the
-        _categories class attribute. If the file has already been loaded, it does nothing.
+        This method loads the categories from the YAML file and
+        stores them in the _categories class attribute. If the file has already been
+        loaded, it does nothing.
 
         Raises:
             FileNotFoundError: If the categories file is not found.
             ValueError: If the YAML file format is invalid or parsing fails.
         """
         if cls._categories is None:
+            console_logger.info("Loading categories from file...")
             try:
                 with open(cls.CATEGORIES_FILE, 'r') as file:
-                    cls._categories = yaml.safe_load(file)
-                    if not isinstance(cls._categories, dict):
+                    raw_categories = yaml.safe_load(file)
+                    if not isinstance(raw_categories, dict):
                         error_msg = "Invalid format: The category file must contain a dictionary."
                         logger.error(error_msg)
                         console_logger.error(f"Error: {error_msg}")
                         raise ValueError(error_msg)
+
+                # Check for empty categories
+                empty_categories = [cat for cat, items in raw_categories.items() if not items]
+                if empty_categories:
+                    error_msg = f"Empty categories found: {', '.join(empty_categories)}"
+                    logger.error(error_msg)
+                    console_logger.error(f"Error: {error_msg}")
+                    raise ValueError(error_msg)
+
+                cls._categories = raw_categories
+
             except FileNotFoundError:
                 error_msg = f"The file {cls.CATEGORIES_FILE} does not exist."
                 logger.error(error_msg)
@@ -74,10 +84,14 @@ class CategoryLoader:
                 logger.error(error_msg)
                 console_logger.error("Error: Failed to parse category file.")
                 raise ValueError(error_msg)
+            except Exception as e:
+                error_msg = f"Unexpected error: {e}"
+                logger.error(error_msg)
+                console_logger.error(f"Error: Unexpected error occurred: {e}")
+                raise
             else:
-                logger.info("Category file successfully loaded.")
                 console_logger.info("Category file successfully loaded.")
-    
+
     @classmethod
     def get_category(cls, category: Categories | str) -> list[str]:
         """
@@ -98,15 +112,18 @@ class CategoryLoader:
             FileNotFoundError: If the categories file is not found.
             ValueError: If the YAML file format is invalid or parsing fails.
         """
-        cls._load_categories()
+        try:
+            cls._load_categories()
 
-        category_name = category.value if isinstance(category, Categories) else category
+            category_name = category.value if isinstance(category, Categories) else category
+            console_logger.info(f"Retrieving category: {category_name}")
 
-        if category_name not in cls._categories:
-            logger.warning(f"The category '{category_name}' does not exist in the category file.")
-            console_logger.warning(f"Warning: Category '{category_name}' not found.")
-            return []
+            if category_name not in cls._categories:
+                console_logger.warning(f"The category '{category_name}' does not exist in the category file.")
+                return None
 
-        logger.info(f"Retrieved category: {category_name}")
-        console_logger.info(f"Retrieved category: {category_name}")
-        return cls._categories[category_name]
+            console_logger.info(f"Successfully retrieved category: {category_name}")
+            return cls._categories[category_name]
+        except Exception as e:
+            console_logger.error(f"Error retrieving category: {e}")
+            return None

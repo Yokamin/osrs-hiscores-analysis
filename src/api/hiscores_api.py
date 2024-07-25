@@ -48,6 +48,7 @@ class HiscoresAPI:
         Raises:
             requests.RequestException: If there's an error with the API request.
         """
+        console_logger.info(f"Making API call for player '{username}'...")
         response = requests.get(f"{url}{quote(username)}", timeout=10)
         response.raise_for_status()
         return response
@@ -67,6 +68,7 @@ class HiscoresAPI:
         Raises:
             KeyError: If the expected data is not present in the response.
         """
+        console_logger.info(f"Parsing API response for {game_mode.value} mode...")
         data = response.json()
         return PlayerData(
             game_mode=game_mode.name,
@@ -86,6 +88,7 @@ class HiscoresAPI:
         Returns:
             PlayerData | None: The player's data if found, None otherwise.
         """
+        console_logger.info(f"Fetching data for player '{username}' in {game_mode.value} mode...")
         url = cls.BASE_URLS.get(game_mode)
         if not url:
             console_logger.error(f"Invalid game mode: {game_mode.value}")
@@ -120,6 +123,7 @@ class HiscoresAPI:
         Returns:
             GameMode | None: The determined game mode, or None if unable to determine.
         """
+        console_logger.info(f"Determining game mode for player '{username}'...")
         modes_to_check = [GameMode.IRONMAN, GameMode.REGULAR]
         if not skip_hardcore:
             modes_to_check.insert(0, GameMode.HARDCORE)
