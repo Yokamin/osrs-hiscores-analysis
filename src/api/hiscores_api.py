@@ -1,4 +1,4 @@
-# src/api/hiscores.py
+# src/api/hiscores_api.py
 
 from enum import Enum
 import requests
@@ -133,3 +133,4 @@ class HiscoresAPI:
 
         console_logger.warning(f'Unable to determine game mode for "{username}". Account may not exist.')
         return None
+
