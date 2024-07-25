@@ -4,6 +4,7 @@ import re
 from ..api.hiscores_api import HiscoresAPI, GameMode
 from .logger import console_logger
 from .category_loader import CategoryLoader, Categories
+from dataclasses import dataclass
 
 def validate_usernames(usernames: list[str]) -> tuple[list[str], list[str]]:
     """
@@ -29,6 +30,9 @@ def validate_usernames(usernames: list[str]) -> tuple[list[str], list[str]]:
         >>> validate_usernames(["Player 123", "Invalid  Name", "", "Zezima"])
         (['Player 123', 'Zezima'], ['Invalid  Name', ''])
     """
+    if not usernames:
+        raise ValueError("The list of usernames to validate cannot be empty.")
+    
     pattern = r'^[a-zA-Z0-9](([a-zA-Z0-9]| (?! )){0,10}[a-zA-Z0-9])?$'
     valid_usernames = []
     invalid_usernames = []
@@ -41,28 +45,33 @@ def validate_usernames(usernames: list[str]) -> tuple[list[str], list[str]]:
 
     return valid_usernames, invalid_usernames
 
-def check_missing_categories(username: str) -> tuple[list[str], list[str]]:
+@dataclass
+class CategoryComparison:
+    missing_skills: list[str]
+    missing_activities: list[str]
+    extra_skills: list[str]
+    extra_activities: list[str]
+
+def check_missing_categories(username: str) -> CategoryComparison:
     """
-    Check for any missing categories in the local category list compared to the API data.
+    Check for any discrepancies between the local category list and the API data.
 
     This function fetches data for the specified username from the API and compares it
-    with the local list of all skills and activities to identify any missing categories.
+    with the local list of all skills and activities to identify any missing or extra categories.
 
     Args:
         username (str): The name of the username to fetch data for.
 
     Returns:
-        tuple[list[str], list[str]]: A tuple containing two lists:
-            1. List of missing skills
-            2. List of missing activities
+        CategoryComparison: An object containing lists of missing and extra skills and activities.
 
     Raises:
         ValueError: If the username data cannot be fetched from the API.
 
     Example:
-        >>> missing_skills, missing_activities = check_missing_categories("Zezima")
-        >>> print(f"Missing skills: {missing_skills}")
-        >>> print(f"Missing activities: {missing_activities}")
+        >>> result = check_missing_categories("Zezima")
+        >>> print(f"Missing skills: {result.missing_skills}")
+        >>> print(f"Extra activities: {result.extra_activities}")
     """
     console_logger.info("Initiating category comparison")
     
@@ -83,19 +92,34 @@ def check_missing_categories(username: str) -> tuple[list[str], list[str]]:
     api_skills = {skill['name'] for skill in player_data['skills']}
     api_activities = {activity['name'] for activity in player_data['activities']}
 
-    # Find missing categories
+    # Find missing and extra categories
     console_logger.info("Comparing local categories with API categories")
     missing_skills = api_skills - local_skills
     missing_activities = api_activities - local_activities
+    extra_skills = local_skills - api_skills
+    extra_activities = local_activities - api_activities
 
-    if missing_skills:
-        console_logger.warning(f"Found {len(missing_skills)} missing skills in local data")
-        console_logger.info(f"Missing skills: {', '.join(missing_skills)}")
-    if missing_activities:
-        console_logger.warning(f"Found {len(missing_activities)} missing activities in local data")
-        console_logger.info(f"Missing activities: {', '.join(missing_activities)}")
-    if not missing_skills and not missing_activities:
-        console_logger.info("Local category data is up-to-date. No missing categories found")
+    result = CategoryComparison(
+        list(missing_skills),
+        list(missing_activities),
+        list(extra_skills),
+        list(extra_activities)
+    )
+
+    # Log results
+    for attr, desc in [
+        ('missing_skills', 'missing skills in local data'),
+        ('missing_activities', 'missing activities in local data'),
+        ('extra_skills', 'extra skills in local data'),
+        ('extra_activities', 'extra activities in local data')
+    ]:
+        items = getattr(result, attr)
+        if items:
+            console_logger.warning(f"Found {len(items)} {desc}")
+            console_logger.info(f"{attr.capitalize()}: {', '.join(items)}")
+
+    if all(not getattr(result, attr) for attr in vars(result)):
+        console_logger.info("Local category data matches API data. No discrepancies found")
 
     console_logger.info("Category comparison completed")
-    return list(missing_skills), list(missing_activities)
+    return result

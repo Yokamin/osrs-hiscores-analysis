@@ -33,6 +33,10 @@ def process_data(api_data: PlayerData, categories: list[str]) -> dict[str, dict[
     Raises:
         KeyError: If the expected data structure is not present in the API data.
     """
+    if not categories:
+        console_logger.error("No categories provided for processing")
+        return None
+    
     console_logger.info(f"Starting to process data for {len(categories)} categories")
     try:
         processed_data: dict[str, dict[str, int | str | None]] = {
