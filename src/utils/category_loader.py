@@ -1,3 +1,5 @@
+# src/utils/category_loader.py
+
 import yaml
 import os
 from enum import Enum
