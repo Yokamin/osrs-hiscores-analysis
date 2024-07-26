@@ -3,10 +3,15 @@
 import yaml
 import os
 from enum import Enum
-from .logger import logger, console_logger
+from .logger import console_logger, logger
 
-class Categories(Enum):
-    """Enum representing different categories in the config."""
+class CategoryGroups(Enum):
+    """
+    Enum representing different category groups in the config.
+
+    This enum defines various groupings of skills and activities in Old School RuneScape,
+    allowing for easy categorization and retrieval of related data.
+    """
     ALL_SKILLS = "All Skills"
     ALL_ACTIVITIES = "All Activities"
     COMBAT = "Combat"
@@ -23,21 +28,20 @@ class Categories(Enum):
 
 class CategoryLoader:
     """
-    A class to load and retrieve skill and activity categories from a YAML file.
+    A class for loading and managing categories of skills and activities from a YAML file.
 
-    This class provides methods to load categories from a YAML file and retrieve specific categories.
-    It uses caching to avoid repeated file reads.
+    This class provides methods to load categories from a predefined YAML file and
+    retrieve specific categories as requested. It uses a caching mechanism to avoid
+    unnecessary file reads.
 
     Attributes:
         BASE_DIR (str): The base directory path.
-        CATEGORIES_FILE (str): The path to the YAML file containing the categories.
-        _categories (dict[str, list[str]] | None): Cached category data.
+        CATEGORIES_FILE (str): The full path to the YAML file containing categories.
+        _categories (dict[str, list[str]] | None): A cache of loaded categories.
     """
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     CATEGORIES_FILE = os.path.join(BASE_DIR, 'skill_and_activity_categories.yaml')
-
-    # Cache for storing categories data to avoid repeated file reads
     _categories: dict[str, list[str]] | None = None
 
     @classmethod
@@ -45,85 +49,89 @@ class CategoryLoader:
         """
         Load the YAML file containing the categories.
 
-        This method loads the categories from the YAML file and
-        stores them in the _categories class attribute. If the file has already been
-        loaded, it does nothing.
+        This method reads the YAML file and populates the _categories cache.
+        It performs various checks to ensure the integrity of the loaded data.
 
         Raises:
-            FileNotFoundError: If the categories file is not found.
-            ValueError: If the YAML file format is invalid or parsing fails.
+            FileNotFoundError: If the category file is not found.
+            ValueError: If the YAML file format is invalid or contains empty categories.
+            yaml.YAMLError: If there's an error parsing the YAML file.
+            Exception: For any other unexpected errors during loading.
         """
         if cls._categories is None:
-            console_logger.info("Loading categories from file...")
+            logger.info("Loading categories from file...")
             try:
                 with open(cls.CATEGORIES_FILE, 'r') as file:
                     raw_categories = yaml.safe_load(file)
                     if not isinstance(raw_categories, dict):
-                        error_msg = "Invalid format: The category file must contain a dictionary."
-                        logger.error(error_msg)
-                        console_logger.error(f"Error: {error_msg}")
-                        raise ValueError(error_msg)
+                        raise ValueError("Invalid format: The category file must contain a dictionary.")
 
-                # Check for empty categories
                 empty_categories = [cat for cat, items in raw_categories.items() if not items]
                 if empty_categories:
-                    error_msg = f"Empty categories found: {', '.join(empty_categories)}"
-                    logger.error(error_msg)
-                    console_logger.error(f"Error: {error_msg}")
-                    raise ValueError(error_msg)
+                    raise ValueError(f"Empty categories found: {', '.join(empty_categories)}")
 
                 cls._categories = raw_categories
+                logger.info("Category file successfully loaded.")
 
             except FileNotFoundError:
-                error_msg = f"The file {cls.CATEGORIES_FILE} does not exist."
-                logger.error(error_msg)
-                console_logger.error(f"Error: Category file not found.")
-                raise FileNotFoundError(error_msg)
+                console_logger.error(f"Error: Category file not found: {cls.CATEGORIES_FILE}")
+                raise
             except yaml.YAMLError as e:
-                error_msg = f"Error parsing the YAML file: {e}"
-                logger.error(error_msg)
-                console_logger.error("Error: Failed to parse category file.")
-                raise ValueError(error_msg)
+                console_logger.error(f"Error: Failed to parse category file: {e}")
+                raise ValueError(f"Error parsing the YAML file: {e}")
             except Exception as e:
-                error_msg = f"Unexpected error: {e}"
-                logger.error(error_msg)
                 console_logger.error(f"Error: Unexpected error occurred: {e}")
                 raise
-            else:
-                console_logger.info("Category file successfully loaded.")
 
     @classmethod
-    def get_category(cls, category: Categories | str) -> list[str]:
+    def get_categories(cls, categories: list[CategoryGroups]) -> dict[str, list[str]] | None:
         """
-        Get a specific category.
+        Get one or multiple categories.
 
-        This method retrieves the items in a specified category. If the category
-        doesn't exist, it returns an empty list.
+        This method retrieves the items for one or more specified categories from the loaded YAML data.
 
         Args:
-            category (Categories | str): The category to retrieve. Can be either
-                a Categories enum value or a string.
+            categories (list[CategoryGroups]): A list of CategoryGroups enums representing the categories to retrieve.
 
         Returns:
-            list[str]: List of items in the specified category, or an empty list
-                if the category doesn't exist.
+            dict[str, list[str]] | None: A dictionary where keys are category names and values are lists of items
+                                         in that category. Returns None if any requested category is missing from
+                                         the loaded data.
 
         Raises:
             FileNotFoundError: If the categories file is not found.
-            ValueError: If the YAML file format is invalid or parsing fails.
+            ValueError: If the YAML file format is invalid, parsing fails, or if an invalid category type is provided.
+            Exception: For any other unexpected errors during category retrieval.
+
+        Example:
+            >>> CategoryLoader.get_categories([CategoryGroups.ALL_SKILLS, CategoryGroups.COMBAT])
+            {
+                'All Skills': ['Attack', 'Strength', 'Defence', ...],
+                'Combat': ['Attack', 'Strength', 'Defence', 'Ranged', 'Prayer', 'Magic']
+            }
         """
+        console_logger.info("Retrieving categories...")
         try:
             cls._load_categories()
 
-            category_name = category.value if isinstance(category, Categories) else category
-            console_logger.info(f"Retrieving category: {category_name}")
+            result = {}
+            for category in categories:
+                if not isinstance(category, CategoryGroups):
+                    raise ValueError(f"Invalid category type: {type(category)}. Expected CategoryGroups enum.")
+                
+                category_name = category.value
+                logger.info(f"Retrieving category: {category_name}")
 
-            if category_name not in cls._categories:
-                console_logger.warning(f"The category '{category_name}' does not exist in the category file.")
-                return None
+                if category_name not in cls._categories:
+                    error_msg = f"The category '{category_name}' does not exist in the category file."
+                    console_logger.error(error_msg)
+                    return None  # Return None if any category is missing
+                else:
+                    result[category_name] = cls._categories[category_name]
 
-            console_logger.info(f"Successfully retrieved category: {category_name}")
-            return cls._categories[category_name]
+            console_logger.info(f"Successfully retrieved {len(result)} categories")
+            return result
+
         except Exception as e:
-            console_logger.error(f"Error retrieving category: {e}")
-            return None
+            console_logger.error(f"Error retrieving categories: {e}")
+            raise  # Re-raise the exception

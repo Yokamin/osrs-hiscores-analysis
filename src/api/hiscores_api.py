@@ -14,7 +14,14 @@ class GameMode(Enum):
     ULTIMATE = "ultimate"
 
 class PlayerData[T: str | int](TypedDict):
-    """TypedDict representing the structure of player data."""
+    """
+    TypedDict representing the structure of player data.
+
+    Attributes:
+        game_mode (str): The game mode of the player.
+        skills (list[dict[str, T]]): A list of dictionaries containing skill data.
+        activities (list[dict[str, T]]): A list of dictionaries containing activity data.
+    """
     game_mode: str
     skills: list[dict[str, T]]
     activities: list[dict[str, T]]
@@ -23,7 +30,8 @@ class HiscoresAPI:
     """
     A class for interacting with the Old School RuneScape Hiscores API.
 
-    This class provides methods to fetch and process hiscore data for OSRS players.
+    This class provides methods to fetch and process hiscore data for OSRS players
+    across different game modes.
     """
 
     BASE_URLS = {
@@ -48,7 +56,7 @@ class HiscoresAPI:
         Raises:
             requests.RequestException: If there's an error with the API request.
         """
-        console_logger.info(f"Making API call for player '{username}'...")
+        logger.info(f"Making API call for player '{username}'...")
         response = requests.get(f"{url}{quote(username)}", timeout=10)
         response.raise_for_status()
         return response
@@ -68,8 +76,8 @@ class HiscoresAPI:
         Raises:
             KeyError: If the expected data is not present in the response.
         """
-        console_logger.info(f"Parsing API response for {game_mode.value} mode...")
-        data = response.json()
+        logger.info(f"Parsing API response for {game_mode.value} mode...")
+        data: dict = response.json()
         return PlayerData(
             game_mode=game_mode.name,
             skills=data['skills'],
@@ -87,8 +95,12 @@ class HiscoresAPI:
 
         Returns:
             PlayerData | None: The player's data if found, None otherwise.
+
+        Raises:
+            requests.RequestException: If there's an error with the API request.
+            KeyError: If the expected data is not present in the response.
         """
-        console_logger.info(f"Fetching data for player '{username}' in {game_mode.value} mode...")
+        logger.info(f"Fetching data for player '{username}' in {game_mode.value} mode...")
         url = cls.BASE_URLS.get(game_mode)
         if not url:
             console_logger.error(f"Invalid game mode: {game_mode.value}")
@@ -111,9 +123,40 @@ class HiscoresAPI:
             return None
 
     @classmethod
+    def get_multiple_player_data(cls, usernames: list[str], game_mode: GameMode = GameMode.REGULAR) -> dict[str, PlayerData]:
+        """
+        Fetch player data for multiple usernames from the OSRS Hiscores API.
+
+        Args:
+            usernames (list[str]): A list of player usernames to fetch data for.
+            game_mode (GameMode, optional): The game mode to fetch data for. Defaults to GameMode.REGULAR.
+
+        Returns:
+            dict[str, PlayerData]: A dictionary where keys are usernames and values are PlayerData objects.
+                                   Usernames for which data couldn't be fetched are omitted from the result.
+
+        Note:
+            This method logs warnings for usernames that couldn't be fetched.
+        """
+        console_logger.info(f"Fetching data for {len(usernames)} players in {game_mode.value} mode...")
+        player_data = {}
+        for username in usernames:
+            data = cls.get_player_data_from_api(username, game_mode)
+            if data:
+                player_data[username] = data
+            else:
+                console_logger.warning(f"Could not fetch data for player '{username}'")
+        
+        console_logger.info(f"Successfully fetched data for {len(player_data)} out of {len(usernames)} players")
+        return player_data
+
+    @classmethod
     def determine_game_mode(cls, username: str, skip_hardcore: bool = False, skip_uim: bool = False) -> GameMode | None:
         """
         Determine the game mode of a player.
+
+        This method attempts to fetch player data for different game modes to determine
+        the player's actual game mode.
 
         Args:
             username (str): The player's username.
@@ -122,6 +165,10 @@ class HiscoresAPI:
 
         Returns:
             GameMode | None: The determined game mode, or None if unable to determine.
+
+        Note:
+            The method checks game modes in the following order: Ultimate, Hardcore, Ironman, Regular.
+            Skipping options allow for faster checks if certain modes are known to be irrelevant.
         """
         console_logger.info(f"Determining game mode for player '{username}'...")
         modes_to_check = [GameMode.IRONMAN, GameMode.REGULAR]
@@ -137,4 +184,3 @@ class HiscoresAPI:
 
         console_logger.warning(f'Unable to determine game mode for "{username}". Account may not exist.')
         return None
-
