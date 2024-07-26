@@ -19,7 +19,7 @@ def mock_api_data():
     }
 
 def test_process_data_successful(mock_api_data):
-    categories = ['Attack', 'Bounty Hunter']
+    categories = {'Test Group': ['Attack', 'Bounty Hunter']}
     result = process_data(mock_api_data, categories)
 
     assert result is not None
@@ -28,18 +28,18 @@ def test_process_data_successful(mock_api_data):
     assert result['Bounty Hunter'] == {'rank': 1000, 'score': 500}
 
 def test_process_data_missing_category(mock_api_data):
-    categories = ['Attack', 'NonExistentCategory']
+    categories = {'Test Group': ['Attack', 'NonExistentCategory']}
     result = process_data(mock_api_data, categories)
 
     assert result is None
 
 def test_process_data_empty_categories(mock_api_data):
-    result = process_data(mock_api_data, [])
+    result = process_data(mock_api_data, {})
 
     assert result is None
 
 def test_process_data_all_categories(mock_api_data):
-    categories = ['Attack', 'Strength', 'Bounty Hunter', 'Clue Scrolls (all)']
+    categories = {'Test Group': ['Attack', 'Strength', 'Bounty Hunter', 'Clue Scrolls (all)']}
     result = process_data(mock_api_data, categories)
 
     assert result is not None
@@ -56,6 +56,6 @@ def test_process_data_exception_handling():
         raise Exception("Test exception")
 
     invalid_data = {'get': raise_exception}
-    result = process_data(invalid_data, ['Attack'])
+    result = process_data(invalid_data, {'Test Group': ['Attack']})
 
     assert result is None

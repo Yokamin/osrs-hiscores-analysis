@@ -48,7 +48,7 @@ class HiscoresAPI:
         Raises:
             requests.RequestException: If there's an error with the API request.
         """
-        console_logger.info(f"Making API call for player '{username}'...")
+        logger.info(f"Making API call for player '{username}'...")
         response = requests.get(f"{url}{quote(username)}", timeout=10)
         response.raise_for_status()
         return response
@@ -68,8 +68,8 @@ class HiscoresAPI:
         Raises:
             KeyError: If the expected data is not present in the response.
         """
-        console_logger.info(f"Parsing API response for {game_mode.value} mode...")
-        data = response.json()
+        logger.info(f"Parsing API response for {game_mode.value} mode...")
+        data: dict = response.json()
         return PlayerData(
             game_mode=game_mode.name,
             skills=data['skills'],
@@ -88,7 +88,7 @@ class HiscoresAPI:
         Returns:
             PlayerData | None: The player's data if found, None otherwise.
         """
-        console_logger.info(f"Fetching data for player '{username}' in {game_mode.value} mode...")
+        logger.info(f"Fetching data for player '{username}' in {game_mode.value} mode...")
         url = cls.BASE_URLS.get(game_mode)
         if not url:
             console_logger.error(f"Invalid game mode: {game_mode.value}")
@@ -109,6 +109,31 @@ class HiscoresAPI:
         except KeyError as e:
             console_logger.error(f"Error parsing data for {username} in {game_mode.value} mode: {e}")
             return None
+
+    @classmethod
+    def get_multiple_player_data(cls, usernames: list[str], game_mode: GameMode = GameMode.REGULAR) -> dict[str, PlayerData]:
+        """
+        Fetch player data for multiple usernames from the OSRS Hiscores API.
+
+        Args:
+            usernames (List[str]): A list of player usernames to fetch data for.
+            game_mode (GameMode, optional): The game mode to fetch data for. Defaults to GameMode.REGULAR.
+
+        Returns:
+            Dict[str, PlayerData]: A dictionary where keys are usernames and values are PlayerData objects.
+                                   Usernames for which data couldn't be fetched are omitted from the result.
+        """
+        console_logger.info(f"Fetching data for {len(usernames)} players in {game_mode.value} mode...")
+        player_data = {}
+        for username in usernames:
+            data = cls.get_player_data_from_api(username, game_mode)
+            if data:
+                player_data[username] = data
+            else:
+                console_logger.warning(f"Could not fetch data for player '{username}'")
+        
+        console_logger.info(f"Successfully fetched data for {len(player_data)} out of {len(usernames)} players")
+        return player_data
 
     @classmethod
     def determine_game_mode(cls, username: str, skip_hardcore: bool = False, skip_uim: bool = False) -> GameMode | None:

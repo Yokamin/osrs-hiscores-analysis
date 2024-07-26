@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch, mock_open
-from src.utils.category_loader import CategoryLoader, Categories
+from src.utils.category_loader import CategoryLoader, CategoryGroups
 
 MOCK_YAML_DATA = '''
 All Skills:
@@ -33,18 +33,22 @@ def test_load_categories_successful(mock_yaml_file):
     assert 'All Activities' in CategoryLoader._categories
     assert 'Combat' in CategoryLoader._categories
 
-def test_get_category_successful(mock_yaml_file):
-    result = CategoryLoader.get_category(Categories.ALL_SKILLS)
-    assert result == ['Attack', 'Strength', 'Defence']
+def test_get_categories_successful(mock_yaml_file):
+    result = CategoryLoader.get_categories([CategoryGroups.ALL_SKILLS, CategoryGroups.COMBAT])
+    assert result is not None
+    assert 'All Skills' in result
+    assert 'Combat' in result
+    assert result['All Skills'] == ['Attack', 'Strength', 'Defence']
+    assert result['Combat'] == ['Attack', 'Strength']
 
-def test_get_category_nonexistent(mock_yaml_file):
-    result = CategoryLoader.get_category('Nonexistent Category')
+def test_get_categories_nonexistent(mock_yaml_file):
+    result = CategoryLoader.get_categories([CategoryGroups.ALL_SKILLS, CategoryGroups.PVP])
     assert result is None
 
-def test_get_category_exception():
+def test_get_categories_exception():
     with patch.object(CategoryLoader, '_load_categories', side_effect=Exception("Test exception")):
-        result = CategoryLoader.get_category(Categories.ALL_SKILLS)
-        assert result is None
+        with pytest.raises(Exception):
+            CategoryLoader.get_categories([CategoryGroups.ALL_SKILLS])
 
 def test_load_categories_file_not_found():
     with patch('builtins.open', side_effect=FileNotFoundError):
@@ -66,22 +70,16 @@ def test_malformed_yaml():
         with pytest.raises(ValueError):
             CategoryLoader._load_categories()
 
-def test_load_categories_empty_file(mock_yaml_file):
+def test_load_categories_empty_file():
     with patch('builtins.open', new_callable=mock_open, read_data=''):
         with pytest.raises(ValueError):
             CategoryLoader._load_categories()
 
-def test_get_category_combat(mock_yaml_file):
-    result = CategoryLoader.get_category(Categories.COMBAT)
-    assert result == ['Attack', 'Strength']
-
-def test_get_category_all_activities(mock_yaml_file):
-    result = CategoryLoader.get_category(Categories.ALL_ACTIVITIES)
-    assert result == ['Bounty Hunter', 'Clue Scrolls']
-
-def test_get_category_case_sensitive(mock_yaml_file):
-    result = CategoryLoader.get_category('all skills')  # lowercase
-    assert result is None
+def test_get_categories_all_activities(mock_yaml_file):
+    result = CategoryLoader.get_categories([CategoryGroups.ALL_ACTIVITIES])
+    assert result is not None
+    assert 'All Activities' in result
+    assert result['All Activities'] == ['Bounty Hunter', 'Clue Scrolls']
 
 def test_caching_behavior(mock_yaml_file):
     CategoryLoader._load_categories()
@@ -113,3 +111,7 @@ def test_empty_category():
         with pytest.raises(ValueError) as excinfo:
             CategoryLoader._load_categories()
         assert "Empty categories found: EmptyCategory" in str(excinfo.value)
+
+def test_invalid_category_type():
+    with pytest.raises(ValueError):
+        CategoryLoader.get_categories(['Invalid Category'])

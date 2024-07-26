@@ -2,8 +2,8 @@
 
 import re
 from ..api.hiscores_api import HiscoresAPI, GameMode
-from .logger import console_logger
-from .category_loader import CategoryLoader, Categories
+from .logger import console_logger, logger
+from .category_loader import CategoryLoader, CategoryGroups
 from dataclasses import dataclass
 
 def validate_usernames(usernames: list[str]) -> tuple[list[str], list[str]]:
@@ -52,7 +52,7 @@ class CategoryComparison:
     extra_skills: list[str]
     extra_activities: list[str]
 
-def check_missing_categories(username: str) -> CategoryComparison:
+def check_missing_categories(username: str) -> CategoryComparison | None:
     """
     Check for any discrepancies between the local category list and the API data.
 
@@ -63,15 +63,19 @@ def check_missing_categories(username: str) -> CategoryComparison:
         username (str): The name of the username to fetch data for.
 
     Returns:
-        CategoryComparison: An object containing lists of missing and extra skills and activities.
+        CategoryComparison | None: An object containing lists of missing and extra skills and activities,
+                                   or None if there are no discrepancies.
 
     Raises:
         ValueError: If the username data cannot be fetched from the API.
 
     Example:
         >>> result = check_missing_categories("Zezima")
-        >>> print(f"Missing skills: {result.missing_skills}")
-        >>> print(f"Extra activities: {result.extra_activities}")
+        >>> if result:
+        ...     print(f"Missing skills: {result.missing_skills}")
+        ...     print(f"Extra activities: {result.extra_activities}")
+        ... else:
+        ...     print("No discrepancies found")
     """
     console_logger.info("Initiating category comparison")
     
@@ -83,21 +87,32 @@ def check_missing_categories(username: str) -> CategoryComparison:
         raise ValueError("Unable to fetch API data for comparison")
 
     # Get all local categories
-    console_logger.info("Loading local category data")
-    local_skills = set(CategoryLoader.get_category(Categories.ALL_SKILLS))
-    local_activities = set(CategoryLoader.get_category(Categories.ALL_ACTIVITIES))
+    logger.info("Loading local category data")
+    try:
+        categories = CategoryLoader.get_categories([CategoryGroups.ALL_SKILLS, CategoryGroups.ALL_ACTIVITIES])
+        local_skills = set(categories[CategoryGroups.ALL_SKILLS.value])
+        local_activities = set(categories[CategoryGroups.ALL_ACTIVITIES.value])
+    except Exception as e:
+        console_logger.error(f"Error loading local categories: {e}")
+        raise ValueError("Unable to load local categories for comparison")
 
     # Extract categories from API data
-    console_logger.info("Extracting categories from API data")
+    logger.info("Extracting categories from API data")
     api_skills = {skill['name'] for skill in player_data['skills']}
     api_activities = {activity['name'] for activity in player_data['activities']}
 
     # Find missing and extra categories
-    console_logger.info("Comparing local categories with API categories")
+    logger.info("Comparing local categories with API categories")
     missing_skills = api_skills - local_skills
     missing_activities = api_activities - local_activities
     extra_skills = local_skills - api_skills
     extra_activities = local_activities - api_activities
+
+    # Check if there are any discrepancies
+    if not any([missing_skills, missing_activities, extra_skills, extra_activities]):
+        console_logger.info("Local category data matches API data. No discrepancies found")
+        logger.info("Category comparison completed")
+        return None
 
     result = CategoryComparison(
         list(missing_skills),
@@ -118,8 +133,6 @@ def check_missing_categories(username: str) -> CategoryComparison:
             console_logger.warning(f"Found {len(items)} {desc}")
             console_logger.info(f"{attr.capitalize()}: {', '.join(items)}")
 
-    if all(not getattr(result, attr) for attr in vars(result)):
-        console_logger.info("Local category data matches API data. No discrepancies found")
+    logger.info("Category comparison completed")
 
-    console_logger.info("Category comparison completed")
     return result

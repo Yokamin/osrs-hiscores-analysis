@@ -4,7 +4,6 @@ import pytest
 from unittest.mock import patch
 from src.utils.general_utility import validate_usernames, check_missing_categories
 from src.api.hiscores_api import HiscoresAPI
-from src.utils.category_loader import Categories
 
 def test_validate_usernames():
     valid, invalid = validate_usernames(["Zezima", "Player 123", "Invalid  Name", "", "TooLongUsername123"])
@@ -84,18 +83,19 @@ def mock_api_data():
 @pytest.fixture
 def mock_category_data():
     return {
-        Categories.ALL_SKILLS: ['Attack', 'Strength', 'Defence'],
-        Categories.ALL_ACTIVITIES: ['Bounty Hunter', 'Clue Scrolls']
+        'All Skills': ['Attack', 'Strength', 'Defence'],
+        'All Activities': ['Bounty Hunter', 'Clue Scrolls']
     }
 
 @patch.object(HiscoresAPI, 'get_player_data_from_api')
-@patch('src.utils.general_utility.CategoryLoader.get_category')
-def test_check_missing_categories(mock_get_category, mock_get_player_data, mock_api_data, mock_category_data):
+@patch('src.utils.general_utility.CategoryLoader.get_categories')
+def test_check_missing_categories(mock_get_categories, mock_get_player_data, mock_api_data, mock_category_data):
     mock_get_player_data.return_value = mock_api_data
-    mock_get_category.side_effect = lambda x: mock_category_data[x]
+    mock_get_categories.return_value = mock_category_data
 
     result = check_missing_categories("TestUser")
 
+    assert result is not None
     assert result.missing_skills == ['NewSkill']
     assert result.missing_activities == ['NewActivity']
     assert set(result.extra_skills) == set(['Strength', 'Defence'])
@@ -109,35 +109,39 @@ def test_check_missing_categories_api_failure(mock_get_player_data):
         check_missing_categories("TestUser")
 
 @patch.object(HiscoresAPI, 'get_player_data_from_api')
-@patch('src.utils.general_utility.CategoryLoader.get_category')
-def test_check_missing_categories_no_missing(mock_get_category, mock_get_player_data, mock_api_data, mock_category_data):
+@patch('src.utils.general_utility.CategoryLoader.get_categories')
+def test_check_missing_categories_no_missing(mock_get_categories, mock_get_player_data, mock_api_data, mock_category_data):
     mock_api_data['skills'] = [{'name': 'Attack', 'rank': 100, 'level': 99, 'xp': 13034431}]
     mock_api_data['activities'] = [{'name': 'Bounty Hunter', 'rank': 1, 'score': 1000}]
     mock_get_player_data.return_value = mock_api_data
-    mock_get_category.side_effect = lambda x: mock_category_data[x]
+    mock_get_categories.return_value = mock_category_data
 
     result = check_missing_categories("TestUser")
 
+    assert result is not None
     assert result.missing_skills == []
     assert result.missing_activities == []
     assert set(result.extra_skills) == set(['Strength', 'Defence'])
     assert result.extra_activities == ['Clue Scrolls']
 
 @patch.object(HiscoresAPI, 'get_player_data_from_api')
-@patch('src.utils.general_utility.CategoryLoader.get_category')
-def test_check_missing_categories_no_discrepancies(mock_get_category, mock_get_player_data, mock_api_data, mock_category_data):
+@patch('src.utils.general_utility.CategoryLoader.get_categories')
+def test_check_missing_categories_no_discrepancies(mock_get_categories, mock_get_player_data, mock_api_data):
     mock_api_data['skills'] = [{'name': 'Attack', 'rank': 100, 'level': 99, 'xp': 13034431}]
     mock_api_data['activities'] = [{'name': 'Bounty Hunter', 'rank': 1, 'score': 1000}]
     mock_get_player_data.return_value = mock_api_data
-    mock_category_data = {
-        Categories.ALL_SKILLS: ['Attack'],
-        Categories.ALL_ACTIVITIES: ['Bounty Hunter']
+    mock_get_categories.return_value = {
+        'All Skills': ['Attack'],
+        'All Activities': ['Bounty Hunter']
     }
-    mock_get_category.side_effect = lambda x: mock_category_data[x]
 
     result = check_missing_categories("TestUser")
 
-    assert result.missing_skills == []
-    assert result.missing_activities == []
-    assert result.extra_skills == []
-    assert result.extra_activities == []
+    assert result is None
+
+@patch('src.utils.general_utility.CategoryLoader.get_categories')
+def test_check_missing_categories_category_loader_failure(mock_get_categories):
+    mock_get_categories.return_value = None
+
+    with pytest.raises(ValueError, match="Unable to load local categories for comparison"):
+        check_missing_categories("TestUser")

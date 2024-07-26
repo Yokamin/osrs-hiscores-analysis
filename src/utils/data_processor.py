@@ -1,9 +1,9 @@
 # src\utils\data_processor.py
 
 from ..api.hiscores_api import PlayerData
-from ..utils.logger import console_logger
+from ..utils.logger import console_logger, logger
 
-def process_data(api_data: PlayerData, categories: list[str]) -> dict[str, dict[str, int | str | None]] | None:
+def process_data(api_data: PlayerData, categories: dict[str, list[str]]) -> dict[str, dict[str, int | str | None]] | None:
     """
     Process player data from the OSRS Hiscores API.
 
@@ -13,7 +13,7 @@ def process_data(api_data: PlayerData, categories: list[str]) -> dict[str, dict[
 
     Args:
         api_data: PlayerData object containing raw API data.
-        categories: A list of category names (skills or activities) to process.
+        categories: A dictionary where keys are category group names and values are lists of category names to process.
 
     Returns:
         A dictionary containing processed data for each category, or None if processing fails.
@@ -37,7 +37,7 @@ def process_data(api_data: PlayerData, categories: list[str]) -> dict[str, dict[
         console_logger.error("No categories provided for processing")
         return None
     
-    console_logger.info(f"Starting to process data for {len(categories)} categories")
+    logger.info(f"Starting to process data for {sum(len(cat) for cat in categories)} categories")
     try:
         processed_data: dict[str, dict[str, int | str | None]] = {
             "game_mode": api_data.get("game_mode"),
@@ -49,31 +49,87 @@ def process_data(api_data: PlayerData, categories: list[str]) -> dict[str, dict[
 
         missing_categories = []
 
-        for category in categories:
-            if category in skills_dict:
-                skill_data = skills_dict[category]
-                processed_data[category] = {
-                    "rank": skill_data["rank"],
-                    "level": skill_data["level"],
-                    "xp": skill_data["xp"]
-                }
-            elif category in activities_dict:
-                activity_data = activities_dict[category]
-                processed_data[category] = {
-                    "rank": activity_data["rank"],
-                    "score": activity_data["score"]
-                }
-            else:
-                missing_categories.append(category)
+        for category_group, category_items in categories.items():
+            for category in category_items:
+                if category in skills_dict:
+                    skill_data = skills_dict[category]
+                    processed_data[category] = {
+                        "rank": skill_data["rank"],
+                        "level": skill_data["level"],
+                        "xp": skill_data["xp"]
+                    }
+                elif category in activities_dict:
+                    activity_data = activities_dict[category]
+                    processed_data[category] = {
+                        "rank": activity_data["rank"],
+                        "score": activity_data["score"]
+                    }
+                else:
+                    missing_categories.append(category)
 
         if missing_categories:
             error_message = f"Categories not found in API data: {', '.join(missing_categories)}"
             console_logger.error(error_message)
             return None
 
-        console_logger.info(f"Processed data for {len(categories)} categories")
+        logger.info(f"Processed data for {len(processed_data) - 1} categories")  # -1 for 'game_mode'
         return processed_data
 
     except Exception as e:
         console_logger.error(f"Error processing data: {str(e)}")
         return None
+
+def process_multiple_players(players_data: dict[str, PlayerData], categories: dict[str, list[str]]) -> tuple[dict[str, dict[str, dict[str, int | str | None]]], list[str]] | None:
+    """
+    Process data for multiple players from the OSRS Hiscores API.
+
+    Args:
+        players_data: A dictionary where keys are player names and values are PlayerData objects.
+        categories: A dictionary where keys are category group names and values are lists of category names to process.
+
+    Returns:
+        A tuple containing:
+        1. A dictionary of processed player data, where keys are player names and values are processed data.
+        2. A list of player names for which processing failed.
+        Returns None if no players could be processed at all.
+
+    The structure of the processed data dictionary is:
+    {
+        'player_name': {
+            'game_mode': str,
+            'category_name': {
+                'rank': int,
+                'level': int,
+                'xp': int
+            } | {
+                'rank': int,
+                'score': int
+            }
+        }
+    }
+    """
+    if not players_data or not categories:
+        console_logger.error("No player data or categories provided for processing")
+        return None
+
+    console_logger.info(f"Starting to process data for {len(players_data)} players and {sum(len(cat) for cat in categories.values())} categories")
+    processed_players = {}
+    unprocessed_players = []
+
+    for player_name, player_data in players_data.items():
+        processed_player_data = process_data(player_data, categories)
+        if processed_player_data:
+            processed_players[player_name] = processed_player_data
+        else:
+            console_logger.warning(f"Failed to process data for player: {player_name}")
+            unprocessed_players.append(player_name)
+
+    if not processed_players:
+        console_logger.error("Failed to process data for any players")
+        return None
+
+    console_logger.info(f"Successfully processed data for {len(processed_players)} players and")
+    if unprocessed_players:
+        console_logger.warning(f"Failed to process data for {len(unprocessed_players)} players: {', '.join(unprocessed_players)}")
+
+    return processed_players, unprocessed_players
