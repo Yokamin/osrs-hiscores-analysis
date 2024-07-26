@@ -6,7 +6,12 @@ from enum import Enum
 from .logger import console_logger, logger
 
 class CategoryGroups(Enum):
-    """Enum representing different category groups in the config."""
+    """
+    Enum representing different category groups in the config.
+
+    This enum defines various groupings of skills and activities in Old School RuneScape,
+    allowing for easy categorization and retrieval of related data.
+    """
     ALL_SKILLS = "All Skills"
     ALL_ACTIVITIES = "All Activities"
     COMBAT = "Combat"
@@ -22,13 +27,37 @@ class CategoryGroups(Enum):
     OTHER = "Other"
 
 class CategoryLoader:
+    """
+    A class for loading and managing categories of skills and activities from a YAML file.
+
+    This class provides methods to load categories from a predefined YAML file and
+    retrieve specific categories as requested. It uses a caching mechanism to avoid
+    unnecessary file reads.
+
+    Attributes:
+        BASE_DIR (str): The base directory path.
+        CATEGORIES_FILE (str): The full path to the YAML file containing categories.
+        _categories (dict[str, list[str]] | None): A cache of loaded categories.
+    """
+
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     CATEGORIES_FILE = os.path.join(BASE_DIR, 'skill_and_activity_categories.yaml')
     _categories: dict[str, list[str]] | None = None
 
     @classmethod
     def _load_categories(cls) -> None:
-        """Load the YAML file containing the categories."""
+        """
+        Load the YAML file containing the categories.
+
+        This method reads the YAML file and populates the _categories cache.
+        It performs various checks to ensure the integrity of the loaded data.
+
+        Raises:
+            FileNotFoundError: If the category file is not found.
+            ValueError: If the YAML file format is invalid or contains empty categories.
+            yaml.YAMLError: If there's an error parsing the YAML file.
+            Exception: For any other unexpected errors during loading.
+        """
         if cls._categories is None:
             logger.info("Loading categories from file...")
             try:
@@ -59,18 +88,27 @@ class CategoryLoader:
         """
         Get one or multiple categories.
 
-        This method retrieves the items for one or more specified categories.
+        This method retrieves the items for one or more specified categories from the loaded YAML data.
 
         Args:
-            categories: A list of CategoryGroups enums.
+            categories (list[CategoryGroups]): A list of CategoryGroups enums representing the categories to retrieve.
 
         Returns:
-            A dictionary where keys are category names and values are lists of items in that category.
-            Returns None if any requested category is missing from the loaded data.
+            dict[str, list[str]] | None: A dictionary where keys are category names and values are lists of items
+                                         in that category. Returns None if any requested category is missing from
+                                         the loaded data.
 
         Raises:
             FileNotFoundError: If the categories file is not found.
-            ValueError: If the YAML file format is invalid or parsing fails or if an invalid category type is provided.
+            ValueError: If the YAML file format is invalid, parsing fails, or if an invalid category type is provided.
+            Exception: For any other unexpected errors during category retrieval.
+
+        Example:
+            >>> CategoryLoader.get_categories([CategoryGroups.ALL_SKILLS, CategoryGroups.COMBAT])
+            {
+                'All Skills': ['Attack', 'Strength', 'Defence', ...],
+                'Combat': ['Attack', 'Strength', 'Defence', 'Ranged', 'Prayer', 'Magic']
+            }
         """
         console_logger.info("Retrieving categories...")
         try:

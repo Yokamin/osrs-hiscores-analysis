@@ -3,6 +3,53 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
+## [0.0.4] - 26-Jul-24
+
+## Added
+
+- Added sample main.py file in root directory
+    - Utilises all current scripts for several users and prints processed data
+
+## Changed
+
+- Changes to `hiscores_api.py`
+    - Added method `get_multiple_player_data` for processing multiple usernames at a time
+        - Input: `usernames: list[str]`
+        - Output: `dict[str, PlayerData]`
+        - Updated logging
+    - Updated `test_hiscores_api.py` accordingly
+        - Added test cases:
+            - `test_get_multiple_player_data`
+            - `test_get_multiple_player_data_empty_list`
+            - `test_determine_game_mode_none`
+- Changes to `category_loader.py`
+    - Changed `get_category` -> `get_categories`
+        - Now handles multiple gategories at a time
+        - Input: `categories: list[CategoryGroups]`
+        - Output: `dict[str, list[str]] | None`
+    - Renamed `class Categories` -> `class CategoryGroups`
+    - Updated logging
+    - Updated `test_category_loader.py` accordingly
+        - Removed test cases:
+            - `test_get_category_combat`
+            - `test_get_category_case_sensitive`
+- Changes to `data_processor.py`
+    - Updated `process_data` to handle multiple categories
+        - Input: `api_data: PlayerData, categories: dict[str, list[str]]`
+        - Output: `dict[str, dict[str, int | str | None]] | None`
+        - Updated logging
+    - Added function `process_multiple_players`
+        - Separate function utilising `process_data` to process multiple players at a time
+    - Updated `test_data_processor.py` accordingly
+- Changes to `general_utility.py`
+    - Updated `check_missing_categories`
+        - Returns `None` if successful (nothing is missing)
+        - Returns dict of missing or extra skills/activities if any
+    - Updated logging
+    - Updated `test_general_utility.py` accordingly
+        - Added test case:
+            - `test_check_missing_categories_category_loader_failure`
+
 ## [0.0.3] - 25-Jul-24
 
 ## Added
@@ -46,6 +93,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Category Loader to create templates in `src/utils/category_loader.py`, using `src/utils/skill_and_activity_categories.yaml` for category configs
 - General Utilities in `general_utility.py`
 
+[0.0.3]: https://github.com/Yokamin/osrs-hiscores-analysis/releases/tag/v0.0.4
 [0.0.3]: https://github.com/Yokamin/osrs-hiscores-analysis/releases/tag/v0.0.3
 [0.0.2]: https://github.com/Yokamin/osrs-hiscores-analysis/releases/tag/v0.0.2
 [0.0.1]: https://github.com/Yokamin/osrs-hiscores-analysis/releases/tag/v0.0.1

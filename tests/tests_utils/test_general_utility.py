@@ -6,25 +6,30 @@ from src.utils.general_utility import validate_usernames, check_missing_categori
 from src.api.hiscores_api import HiscoresAPI
 
 def test_validate_usernames():
+    """Test validate_usernames function with a mix of valid and invalid usernames."""
     valid, invalid = validate_usernames(["Zezima", "Player 123", "Invalid  Name", "", "TooLongUsername123"])
     assert valid == ["Zezima", "Player 123"]
     assert invalid == ["Invalid  Name", "", "TooLongUsername123"]
 
 def test_validate_usernames_empty_list():
+    """Test validate_usernames function with an empty list, expecting a ValueError."""
     with pytest.raises(ValueError, match="The list of usernames to validate cannot be empty."):
         validate_usernames([])
 
 def test_validate_usernames_all_valid():
+    """Test validate_usernames function with all valid usernames."""
     valid, invalid = validate_usernames(["Zezima", "Player123", "Hello World"])
     assert valid == ["Zezima", "Player123", "Hello World"]
     assert invalid == []
 
 def test_validate_usernames_all_invalid():
+    """Test validate_usernames function with all invalid usernames."""
     valid, invalid = validate_usernames(["", "Invalid  Name", "TooLongUsername123"])
     assert valid == []
     assert invalid == ["", "Invalid  Name", "TooLongUsername123"]
 
 def test_validate_usernames_edge_cases():
+    """Test validate_usernames function with various edge cases and special characters."""
     valid, invalid = validate_usernames([
         "Normal123",
         "With Space",
@@ -57,17 +62,20 @@ def test_validate_usernames_edge_cases():
     ]
 
 def test_validate_usernames_single_character():
+    """Test validate_usernames function with single character usernames."""
     valid, invalid = validate_usernames(["a", "1", " ", "A"])
     assert valid == ["a", "1", "A"]
     assert invalid == [" "]
 
 def test_validate_usernames_only_spaces():
+    """Test validate_usernames function with a username containing only spaces."""
     valid, invalid = validate_usernames(["   "])
     assert valid == []
     assert invalid == ["   "]
 
 @pytest.fixture
 def mock_api_data():
+    """Fixture to provide mock API data for testing."""
     return {
         'game_mode': 'REGULAR',
         'skills': [
@@ -82,6 +90,7 @@ def mock_api_data():
 
 @pytest.fixture
 def mock_category_data():
+    """Fixture to provide mock category data for testing."""
     return {
         'All Skills': ['Attack', 'Strength', 'Defence'],
         'All Activities': ['Bounty Hunter', 'Clue Scrolls']
@@ -90,6 +99,7 @@ def mock_category_data():
 @patch.object(HiscoresAPI, 'get_player_data_from_api')
 @patch('src.utils.general_utility.CategoryLoader.get_categories')
 def test_check_missing_categories(mock_get_categories, mock_get_player_data, mock_api_data, mock_category_data):
+    """Test check_missing_categories function with mock data, expecting discrepancies."""
     mock_get_player_data.return_value = mock_api_data
     mock_get_categories.return_value = mock_category_data
 
@@ -103,6 +113,7 @@ def test_check_missing_categories(mock_get_categories, mock_get_player_data, moc
 
 @patch.object(HiscoresAPI, 'get_player_data_from_api')
 def test_check_missing_categories_api_failure(mock_get_player_data):
+    """Test check_missing_categories function when API call fails."""
     mock_get_player_data.return_value = None
 
     with pytest.raises(ValueError, match="Unable to fetch API data for comparison"):
@@ -111,6 +122,7 @@ def test_check_missing_categories_api_failure(mock_get_player_data):
 @patch.object(HiscoresAPI, 'get_player_data_from_api')
 @patch('src.utils.general_utility.CategoryLoader.get_categories')
 def test_check_missing_categories_no_missing(mock_get_categories, mock_get_player_data, mock_api_data, mock_category_data):
+    """Test check_missing_categories function with no missing categories but extra local categories."""
     mock_api_data['skills'] = [{'name': 'Attack', 'rank': 100, 'level': 99, 'xp': 13034431}]
     mock_api_data['activities'] = [{'name': 'Bounty Hunter', 'rank': 1, 'score': 1000}]
     mock_get_player_data.return_value = mock_api_data
@@ -127,6 +139,7 @@ def test_check_missing_categories_no_missing(mock_get_categories, mock_get_playe
 @patch.object(HiscoresAPI, 'get_player_data_from_api')
 @patch('src.utils.general_utility.CategoryLoader.get_categories')
 def test_check_missing_categories_no_discrepancies(mock_get_categories, mock_get_player_data, mock_api_data):
+    """Test check_missing_categories function with no discrepancies between API and local data."""
     mock_api_data['skills'] = [{'name': 'Attack', 'rank': 100, 'level': 99, 'xp': 13034431}]
     mock_api_data['activities'] = [{'name': 'Bounty Hunter', 'rank': 1, 'score': 1000}]
     mock_get_player_data.return_value = mock_api_data
@@ -141,6 +154,7 @@ def test_check_missing_categories_no_discrepancies(mock_get_categories, mock_get
 
 @patch('src.utils.general_utility.CategoryLoader.get_categories')
 def test_check_missing_categories_category_loader_failure(mock_get_categories):
+    """Test check_missing_categories function when CategoryLoader fails to load categories."""
     mock_get_categories.return_value = None
 
     with pytest.raises(ValueError, match="Unable to load local categories for comparison"):

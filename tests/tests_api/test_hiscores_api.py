@@ -45,11 +45,9 @@ def test_parse_api_response(regular_username):
     response = HiscoresAPI._make_api_call(url, regular_username)
     result = HiscoresAPI._parse_api_response(response, game_mode)
 
-    # Check that 'game_mode' exists, is a string and is equal to the game mode name
     assert 'game_mode' in result
     assert isinstance(result['game_mode'], str)
     assert result['game_mode'] == game_mode.name
-    # Check that 'skills' and 'activities' exist and are lists
     assert 'skills' in result
     assert isinstance(result['skills'], list)
     assert 'activities' in result
@@ -57,7 +55,7 @@ def test_parse_api_response(regular_username):
 
 def test_determine_game_mode(all_game_modes_usernames):
     """
-    Test the determine_game_mode method.
+    Test the determine_game_mode method for all game modes.
 
     Args:
         all_game_modes_usernames (dict[str, str]): A dictionary mapping game mode names to usernames.
@@ -66,19 +64,17 @@ def test_determine_game_mode(all_game_modes_usernames):
         result = HiscoresAPI.determine_game_mode(username)
         assert result == GameMode[game_mode.upper()]
 
-        # Test with skip_hardcore=True
         if game_mode == "hardcore":
             result = HiscoresAPI.determine_game_mode(username, skip_hardcore=True)
             assert result == GameMode.IRONMAN
 
-        # Test with skip_uim=True
         if game_mode == "ultimate":
             result = HiscoresAPI.determine_game_mode(username, skip_uim=True)
             assert result == GameMode.IRONMAN
 
 def test_get_player_data_from_api(regular_username):
     """
-    Test the get_player_data_from_api method.
+    Test the get_player_data_from_api method for a regular player.
 
     Args:
         regular_username (str): The username to use for the test.
@@ -93,16 +89,16 @@ def test_get_player_data_from_api(regular_username):
 
 def test_get_multiple_player_data(all_game_modes_usernames):
     """
-    Test the get_multiple_player_data method.
+    Test the get_multiple_player_data method with valid and invalid usernames.
 
     Args:
         all_game_modes_usernames (dict[str, str]): A dictionary mapping game mode names to usernames.
     """
-    usernames = list(all_game_modes_usernames.values())[:2]  # Take first two usernames
+    usernames = list(all_game_modes_usernames.values())[:2]
     result = HiscoresAPI.get_multiple_player_data(usernames, GameMode.REGULAR)
     
     assert isinstance(result, dict)
-    assert len(result) <= len(usernames)  # Less than or equal because some usernames might not exist in regular mode
+    assert len(result) <= len(usernames)
     
     for username, data in result.items():
         assert username in usernames
@@ -114,7 +110,6 @@ def test_get_multiple_player_data(all_game_modes_usernames):
         assert 'activities' in data
         assert isinstance(data['activities'], list)
 
-    # Test with an invalid username
     invalid_usernames = usernames + ['ThisUsernameDoesNotExist12345']
     result_with_invalid = HiscoresAPI.get_multiple_player_data(invalid_usernames, GameMode.REGULAR)
     assert len(result_with_invalid) < len(invalid_usernames)
@@ -134,7 +129,7 @@ def test_get_player_data_all_game_modes(all_game_modes_usernames):
 
 def test_username_incorrect_game_mode(regular_username):
     """
-    Test the get_player_data_from_api method when the game mode doesn't exist for the given username.
+    Test get_player_data_from_api with incorrect game modes for a regular username.
 
     Args:
         regular_username (str): The username to use for the test.
@@ -146,7 +141,7 @@ def test_username_incorrect_game_mode(regular_username):
 
 def test_invalid_game_mode(regular_username):
     """
-    Test the get_player_data_from_api method with an invalid game mode.
+    Test get_player_data_from_api with an invalid game mode.
 
     Args:
         regular_username (str): The username to use for the test.
@@ -168,5 +163,4 @@ def test_determine_game_mode_none(mock_get_player_data):
     result = HiscoresAPI.determine_game_mode("NonexistentUser")
     assert result is None
 
-    # Verify that all game modes were checked
     assert mock_get_player_data.call_count == 4  # ULTIMATE, HARDCORE, IRONMAN, REGULAR

@@ -12,11 +12,13 @@ def process_data(api_data: PlayerData, categories: dict[str, list[str]]) -> dict
     activity data based on the provided categories.
 
     Args:
-        api_data: PlayerData object containing raw API data.
-        categories: A dictionary where keys are category group names and values are lists of category names to process.
+        api_data (PlayerData): Object containing raw API data.
+        categories (dict[str, list[str]]): A dictionary where keys are category group names
+                                           and values are lists of category names to process.
 
     Returns:
-        A dictionary containing processed data for each category, or None if processing fails.
+        dict[str, dict[str, int | str | None]] | None: A dictionary containing processed data for each category,
+                                                      or None if processing fails.
         The structure is:
         {
             'game_mode': str,
@@ -32,6 +34,9 @@ def process_data(api_data: PlayerData, categories: dict[str, list[str]]) -> dict
 
     Raises:
         KeyError: If the expected data structure is not present in the API data.
+
+    Note:
+        The function logs errors for missing categories and any exceptions during processing.
     """
     if not categories:
         console_logger.error("No categories provided for processing")
@@ -83,15 +88,21 @@ def process_multiple_players(players_data: dict[str, PlayerData], categories: di
     """
     Process data for multiple players from the OSRS Hiscores API.
 
+    This function iterates through the provided player data, processing each player's
+    data according to the specified categories.
+
     Args:
-        players_data: A dictionary where keys are player names and values are PlayerData objects.
-        categories: A dictionary where keys are category group names and values are lists of category names to process.
+        players_data (dict[str, PlayerData]): A dictionary where keys are player names
+                                              and values are PlayerData objects.
+        categories (dict[str, list[str]]): A dictionary where keys are category group names
+                                           and values are lists of category names to process.
 
     Returns:
-        A tuple containing:
-        1. A dictionary of processed player data, where keys are player names and values are processed data.
-        2. A list of player names for which processing failed.
-        Returns None if no players could be processed at all.
+        tuple[dict[str, dict[str, dict[str, int | str | None]]], list[str]] | None: 
+            A tuple containing:
+            1. A dictionary of processed player data, where keys are player names and values are processed data.
+            2. A list of player names for which processing failed.
+            Returns None if no players could be processed at all.
 
     The structure of the processed data dictionary is:
     {
@@ -107,6 +118,11 @@ def process_multiple_players(players_data: dict[str, PlayerData], categories: di
             }
         }
     }
+
+    Note:
+        - The function logs information about the number of players and categories being processed.
+        - It also logs warnings for players whose data could not be processed.
+        - If no players could be processed, it logs an error and returns None.
     """
     if not players_data or not categories:
         console_logger.error("No player data or categories provided for processing")
@@ -128,7 +144,7 @@ def process_multiple_players(players_data: dict[str, PlayerData], categories: di
         console_logger.error("Failed to process data for any players")
         return None
 
-    console_logger.info(f"Successfully processed data for {len(processed_players)} players and")
+    console_logger.info(f"Successfully processed data for {len(processed_players)} players and {sum(len(cat) for cat in categories.values())} categories")
     if unprocessed_players:
         console_logger.warning(f"Failed to process data for {len(unprocessed_players)} players: {', '.join(unprocessed_players)}")
 

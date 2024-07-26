@@ -24,6 +24,9 @@ def validate_usernames(usernames: list[str]) -> tuple[list[str], list[str]]:
             1. List of valid usernames
             2. List of invalid usernames
 
+    Raises:
+        ValueError: If the input list of usernames is empty.
+
     Examples:
         >>> validate_usernames(["Zezima"])
         (['Zezima'], [])
@@ -47,6 +50,15 @@ def validate_usernames(usernames: list[str]) -> tuple[list[str], list[str]]:
 
 @dataclass
 class CategoryComparison:
+    """
+    A dataclass to store the results of category comparison.
+
+    Attributes:
+        missing_skills (list[str]): Skills present in API data but missing in local data.
+        missing_activities (list[str]): Activities present in API data but missing in local data.
+        extra_skills (list[str]): Skills present in local data but missing in API data.
+        extra_activities (list[str]): Activities present in local data but missing in API data.
+    """
     missing_skills: list[str]
     missing_activities: list[str]
     extra_skills: list[str]
@@ -54,20 +66,20 @@ class CategoryComparison:
 
 def check_missing_categories(username: str) -> CategoryComparison | None:
     """
-    Check for any discrepancies between the local category list and the API data.
+    Check for discrepancies between the local category list and the API data.
 
     This function fetches data for the specified username from the API and compares it
     with the local list of all skills and activities to identify any missing or extra categories.
 
     Args:
-        username (str): The name of the username to fetch data for.
+        username (str): The username to fetch data for.
 
     Returns:
         CategoryComparison | None: An object containing lists of missing and extra skills and activities,
                                    or None if there are no discrepancies.
 
     Raises:
-        ValueError: If the username data cannot be fetched from the API.
+        ValueError: If the username data cannot be fetched from the API or if local categories cannot be loaded.
 
     Example:
         >>> result = check_missing_categories("Zezima")
